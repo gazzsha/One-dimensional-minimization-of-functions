@@ -1,9 +1,8 @@
-#include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <vector>
-#define esp 1.0e-4
+#define esp 0.000001
 #define t_ 4.0
 
 double y(const double& x) { return 10 * x * log(x) - pow(x, 2) / 2; }
@@ -44,8 +43,8 @@ double df2(double& x) {
     double y2 = df1(x2);
     return (y2 - y1) / (x2 - x1);
 }
-double Bitwise_search_method(double x_l, double& x_r, const double& t, int& count) {
-    double delta = (x_r - x_l) / t;
+double Bitwise_search_method(double x_l, double& x_r, int& count) {
+    double delta = (x_r - x_l) / 4;
     std::cout << std::fixed << std::setprecision(3) << "FIRST: " << std::setw(10) << "DELTA = " << delta
               << " "
               << "ESP = " << esp << '\n';
@@ -59,7 +58,7 @@ double Bitwise_search_method(double x_l, double& x_r, const double& t, int& coun
     count++;
     std::cout << std::fixed << std::setprecision(6) << x_l << std::setw(15) << y(x_l) << std::setw(15)
               << count << '\n';
-    delta = delta / t;
+    delta = delta / 4;
     std::cout << std::fixed << std::setprecision(3) << "SECOND: " << std::setw(9) << "DELTA = " << delta
               << " "
               << "ESP = " << esp << '\n';
@@ -75,6 +74,33 @@ double Bitwise_search_method(double x_l, double& x_r, const double& t, int& coun
               << count << '\n';
     x_l += delta;
     return x_l;
+}
+
+
+void print_Bitwise_search_method_new(const double& x_l,int& count) { 
+    std::cout << std::setprecision(6) << x_l << std::setw(15) << y(x_l) << std::setw(15) << count << '\n';
+}
+double Bitwise_search_method_new(double x_l, const double& x_r, int& count) {
+    double delta = (x_r - x_l) / 4;
+    // FILE * file = fopen("data.txt","w");
+    std::ofstream out;
+    out.open("data_c++.txt");
+    do {
+        // fprintf(file,"%lf\n",x_l);
+        out << x_l << '\n';
+        print_Bitwise_search_method_new(x_l,count);
+        count++;
+        x_l += delta;
+    } while (y(x_l) <= y(x_l - delta) && x_l != x_r);
+    while (y(x_l + esp) >= y(x_l) && x_l != x_r) {
+        // fprintf(file,"%lf\n",x_l);
+        out << x_l << '\n';
+        print_Bitwise_search_method_new(x_l,count);
+        count++;
+        x_l -= esp;
+    }
+    // fclose(file);
+    return x_l + esp;
 }
 
 void print_midpoint(const double& x_l, const double& x_r, const double& x_m, const double& der,
@@ -104,9 +130,12 @@ void print_Newton_Raphson_method(const double& x, const double& x_next, const do
 }
 double Newton_Raphson_method(double& x_l, int& count) {
     count++;
-    double x_del = x_l - derivative(x_l) / derivate_second(x_l);
-    double t_opt = pow(derivative(x_l), 2) / (pow(derivative(x_l), 2) + pow(derivative(x_del), 2));
-    double x_next = x_l - t_opt * derivative(x_l) / derivate_second(x_l);
+    double df_xl = derivative(x_l);
+    double dff_xl = derivate_second(x_l);
+
+    double x_del = x_l - df_xl / dff_xl;
+    double t_opt = pow(df_xl, 2) / (pow(df_xl, 2) + pow(derivative(x_del), 2));
+    double x_next = x_l - t_opt * df_xl / dff_xl;
     print_Newton_Raphson_method(x_l, x_next, t_opt, x_next - x_l, count);
     if (x_next - x_l > esp) {
         return Newton_Raphson_method(x_next, count);
@@ -116,9 +145,11 @@ double Newton_Raphson_method(double& x_l, int& count) {
 
 double Newton_Raphson_method_(double& x_l, int& count) {
     count++;
-    double x_del = x_l - df1(x_l) / df2(x_l);
-    double t_opt = pow(df1(x_l), 2) / (pow(df1(x_l), 2) + pow(df1(x_del), 2));
-    double x_next = x_l - t_opt * df1(x_l) / df2(x_l);
+    double df_xl = df1(x_l);
+    double dff_xl = df2(x_l);
+    double x_del = x_l - df_xl / dff_xl;
+    double t_opt = pow(df_xl, 2) / (pow(df_xl, 2) + pow(df1(x_del), 2));
+    double x_next = x_l - t_opt * df_xl / dff_xl;
     print_Newton_Raphson_method(x_l, x_next, t_opt, x_next - x_l, count);
     if (x_next - x_l > esp) {
         return Newton_Raphson_method_(x_next, count);
@@ -210,13 +241,33 @@ double parabola_method(double x1, double x2, double x3, int& count) {
     return x_;
 }
 
+// void initial_approximation(double& a, double& b) {
+//     double delta = 0.1;
+
+//     while ((df1(a) >= 0 && df2(a) >= 0) || (df1(a) <= 0 && df2(a) <= 0)) {
+//         a -= delta;
+//     }
+//     while ((df1(b) >= 0 && df2(b) >= 0) || (df1(b) <= 0 && df2(b) <= 0)) {
+//         b += delta;
+//     }
+// }
+
 void initial_approximation(double& a, double& b) {
     double delta = 0.1;
-    while ((df1(a) >= 0 && df2(a) >= 0) || (df1(a) <= 0 && df2(a) <= 0)) {
+    double df1_a = df1(a);
+    double df2_a = df2(a);
+    double df1_b = df1(b);
+    double df2_b = df2(b);
+
+    while ((df1_a >= 0 && df2_a >= 0) || (df1_a <= 0 && df2_a <= 0)) {
         a -= delta;
+        df1_a = df1(a);
+        df2_a = df2(a);
     }
-    while ((df1(b) >= 0 && df2(b) >= 0) || (df1(b) <= 0 && df2(b) <= 0)) {
+    while ((df1_b >= 0 && df2_b >= 0) || (df1_b <= 0 && df2_b <= 0)) {
         b += delta;
+        df1_b = df1(b);
+        df2_b = df2(b);
     }
 }
 
@@ -262,7 +313,7 @@ int main() {
     std::cout << "First Method:" << '\n';
     std::cout << std::fixed << std::setprecision(3) << "X" << std::setw(15) << "Y" << std::setw(24) << "Count"
               << '\n';
-    double x_min_find = find_method(xl, xr, count);
+    double x_min_find = Bitwise_search_method_new(xl, xr, count);
     std::cout << "X(min) = " << x_min_find << " "
               << "Y(min) = " << y(x_min_find) << '\n';
 
@@ -281,46 +332,49 @@ int main() {
     double x_min_Fibo = fibonacci_method(xl, xr, count);
     std::cout << "X(min) = " << x_min_Fibo << " "
               << "Y(min) = " << y(x_min_Fibo) << '\n';
-    // 3
-    std::cout << "Third Method:" << '\n';
-    std::cout << std::fixed << std::setprecision(3) << "X(Left)" << std::setw(10) << "X(Right)"
-              << std::setw(10) << "X(mid)" << std::setw(15) << "Derivative" << std::setw(14) << "Count"
-              << '\n';
-    count = 0;
-    double x_min_midpoint = midpoint_method(0.1, 1.0, count);
-    std::cout << "X(min) = " << x_min_midpoint << " "
-              << "Y(min) = " << y(x_min_midpoint) << '\n';
+    // // 3
+    // std::cout << "Third Method:" << '\n';
+    // std::cout << std::fixed << std::setprecision(3) << "X(Left)" << std::setw(10) << "X(Right)"
+    //           << std::setw(10) << "X(mid)" << std::setw(15) << "Derivative" << std::setw(14) << "Count"
+    //           << '\n';
+    // count = 0;
+    // double x_min_midpoint = midpoint_method(0.1, 1.0, count);
+    // std::cout << "X(min) = " << x_min_midpoint << " "
+    //           << "Y(min) = " << y(x_min_midpoint) << '\n';
 
-    // 4
-    std::cout << "Fourth Method:" << '\n';
-    std::cout << std::fixed << std::setprecision(3) << "X(Cur.)" << std::setw(9) << "X(Next)" << std::setw(9)
-              << "T(k)" << std::setw(13) << "Delta" << std::setw(13) << "Count" << '\n';
-    count = 0;
-    double x_min_Newton_Raphson_method = Newton_Raphson_method(xl, count);
-    std::cout << "X(min) = " << x_min_Newton_Raphson_method << " "
-              << "Y(min) = " << y(x_min_Newton_Raphson_method) << '\n';
+    // // 4
+    // std::cout << "Fourth Method:" << '\n';
+    // std::cout << std::fixed << std::setprecision(3) << "X(Cur.)" << std::setw(9) << "X(Next)" <<
+    // std::setw(9)
+    //           << "T(k)" << std::setw(13) << "Delta" << std::setw(13) << "Count" << '\n';
+    // count = 0;
+    // double x_min_Newton_Raphson_method = Newton_Raphson_method(xl, count);
+    // std::cout << "X(min) = " << x_min_Newton_Raphson_method << " "
+    //           << "Y(min) = " << y(x_min_Newton_Raphson_method) << '\n';
 
-    // parabola
-    std::cout << "Parabola Method:" << '\n';
-    printf("%s", "x1 = -5, x2=0.4, x3=5\n");
-    std::cout << std::fixed << std::setprecision(3) << "X" << std::setw(15) << "Y" << std::setw(19) << "Delta"
-              << std::setw(12) << "Count" << '\n';
-    count = 0;
-    double x_min_parabola = parabola_method(-5, 0.4, 5, count);
-    std::cout << "X(min) = " << x_min_parabola << " "
-              << "Y(min) = " << fun2(x_min_parabola) << '\n';
-    // Newton
-    printf("%s", "Началльное приближение:\n");
-    double a = 0;
-    double b = 0;
-    initial_approximation(a, b);
-    printf("%s %lf %s %lf %s", "Диапозон: [", a, ";", b, "]\n");
-    std::cout << std::fixed << std::setprecision(3) << "X(Cur.)" << std::setw(9) << "X(Next)" << std::setw(9)
-              << "T(k)" << std::setw(13) << "Delta" << std::setw(13) << "Count" << '\n';
-    count = 0;
-    double x_min_Newton_Raphson_method_ = Newton_Raphson_method_(a, count);
-    std::cout << "X(min) = " << x_min_Newton_Raphson_method_ << " "
-              << "Y(min) = " << fun(x_min_Newton_Raphson_method_) << '\n';
+    // // parabola
+    // std::cout << "Parabola Method:" << '\n';
+    // printf("%s", "x1 = -5, x2=0.4, x3=5\n");
+    // std::cout << std::fixed << std::setprecision(3) << "X" << std::setw(15) << "Y" << std::setw(19) <<
+    // "Delta"
+    //           << std::setw(12) << "Count" << '\n';
+    // count = 0;
+    // double x_min_parabola = parabola_method(-5, 0.4, 5, count);
+    // std::cout << "X(min) = " << x_min_parabola << " "
+    //           << "Y(min) = " << fun2(x_min_parabola) << '\n';
+    // // Newton
+    // printf("%s", "Началльное приближение:\n");
+    // double a = 0;
+    // double b = 0;
+    // initial_approximation(a, b);
+    // printf("%s %lf %s %lf %s", "Диапозон: [", a, ";", b, "]\n");
+    // std::cout << std::fixed << std::setprecision(3) << "X(Cur.)" << std::setw(9) << "X(Next)" <<
+    // std::setw(9)
+    //           << "T(k)" << std::setw(13) << "Delta" << std::setw(13) << "Count" << '\n';
+    // count = 0;
+    // double x_min_Newton_Raphson_method_ = Newton_Raphson_method_(a, count);
+    // std::cout << "X(min) = " << x_min_Newton_Raphson_method_ << " "
+    //           << "Y(min) = " << fun(x_min_Newton_Raphson_method_) << '\n';
 
     return 0;
 }
